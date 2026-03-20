@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TH // Cloud Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:ital,wght@0,400;0,500;0,700;1,400&family=Martian+Mono:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0a0804;
+  --paper:#0f0d09;
+  --surface:#161208;
+  --lift:#1e1810;
+  --lift2:#261f13;
+  --amber:#f0a500;
+  --amber-dim:rgba(240,165,0,0.12);
+  --amber-glow:rgba(240,165,0,0.06);
+  --orange:#ff6b1a;
+  --orange-dim:rgba(255,107,26,0.1);
+  --cream:#e8dcc8;
+  --cream-dim:#7a6e5f;
+  --cream-dimmer:#3d3428;
+  --green:#5dfc8a;
+  --red:#ff4444;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);
+  color:var(--cream);
+  font-family:'Familjen Grotesk',sans-serif;
+  overflow-x:hidden;
+  cursor:none;
+}
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:999;opacity:0.35;
+}
+.cur{width:8px;height:8px;background:var(--amber);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9999;mix-blend-mode:screen;}
+.cur-r{width:28px;height:28px;border:1px solid rgba(240,165,0,0.5);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;transition:all .15s ease;}
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 2.5rem;
+  border-bottom:1px solid var(--lift2);
+  background:rgba(15,13,9,0.92);
+  backdrop-filter:blur(16px);
+}
+.nav-id{font-family:'Martian Mono',monospace;font-size:.7rem;font-weight:700;color:var(--amber);letter-spacing:.15em;}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{font-family:'Martian Mono',monospace;font-size:.62rem;color:var(--cream-dim);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .2s;}
+.nav-links a:hover{color:var(--amber)}
+.nav-sys{display:flex;align-items:center;gap:1.5rem;font-family:'Martian Mono',monospace;font-size:.62rem;color:var(--cream-dimmer);}
+.sys-online{color:var(--green);display:flex;align-items:center;gap:.4rem}
+.sys-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:blink 1.4s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+#hero{min-height:100vh;display:grid;grid-template-columns:1fr 420px;gap:0;padding-top:60px;border-bottom:1px solid var(--lift2);}
+.hero-left{padding:5rem 3rem 5rem 2.5rem;border-right:1px solid var(--lift2);display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
+.hero-left::before{content:'';position:absolute;top:-60px;right:-80px;width:300px;height:600px;background:linear-gradient(135deg,var(--amber-dim),transparent 60%);transform:rotate(12deg);pointer-events:none;}
+.terminal-bar{display:flex;align-items:center;gap:.5rem;margin-bottom:2.5rem;opacity:0;animation:up .5s .1s forwards;}
+.t-dot{width:8px;height:8px;border-radius:50%}
+.t-dot.r{background:#ff5f57}.t-dot.y{background:#ffbd2e}.t-dot.g{background:#28ca41}
+.t-label{font-family:'Martian Mono',monospace;font-size:.6rem;color:var(--cream-dimmer);margin-left:.5rem;letter-spacing:.1em}
+.hero-prompt{font-family:'Martian Mono',monospace;font-size:.75rem;color:var(--amber);letter-spacing:.08em;margin-bottom:1.2rem;opacity:0;animation:up .5s .25s forwards;}
+.hero-prompt span{color:var(--cream-dim)}
+.hero-name{font-size:clamp(3.5rem,7vw,6rem);font-weight:700;line-height:.95;letter-spacing:-.03em;margin-bottom:1.5rem;opacity:0;animation:up .6s .4s forwards;}
+.hero-name em{font-style:italic;color:var(--amber)}
+.hero-role{font-family:'Martian Mono',monospace;font-size:.78rem;color:var(--cream-dim);line-height:1.9;margin-bottom:2.5rem;border-left:2px solid var(--amber);padding-left:1rem;opacity:0;animation:up .5s .6s forwards;}
+.hero-role b{color:var(--cream)}
+.hero-tags{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:3rem;opacity:0;animation:up .5s .75s forwards;}
+.htag{font-family:'Martian Mono',monospace;font-size:.6rem;padding:.3rem .7rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--lift2);color:var(--cream-dim);border-radius:1px;background:var(--lift);}
+.htag.hot{border-color:rgba(240,165,0,.4);color:var(--amber);background:var(--amber-dim)}
+.htag.live{border-color:rgba(93,252,138,.3);color:var(--green);background:rgba(93,252,138,.06)}
+.hero-btns{display:flex;gap:.75rem;flex-wrap:wrap;opacity:0;animation:up .5s .9s forwards;}
+.btn-a{font-family:'Martian Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;padding:.8rem 1.6rem;background:var(--amber);color:var(--ink);border:none;border-radius:1px;text-decoration:none;font-weight:700;transition:all .2s;cursor:none;}
+.btn-a:hover{background:#ffb824;box-shadow:0 0 30px rgba(240,165,0,.3)}
+.btn-b{font-family:'Martian Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;padding:.8rem 1.6rem;background:transparent;color:var(--cream-dim);border:1px solid var(--lift2);border-radius:1px;text-decoration:none;transition:all .2s;cursor:none;}
+.btn-b:hover{border-color:var(--amber);color:var(--amber)}
+.hero-right{display:flex;flex-direction:column;padding:2rem;gap:1px;background:var(--lift2);opacity:0;animation:up .6s .5s forwards;}
+.stat-panel{background:var(--surface);padding:1.5rem;flex:1;display:flex;flex-direction:column;justify-content:space-between;}
+.sp-label{font-family:'Martian Mono',monospace;font-size:.58rem;color:var(--cream-dimmer);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.75rem;}
+.sp-val{font-size:2.4rem;font-weight:700;color:var(--cream);line-height:1;}
+.sp-val.amber{color:var(--amber)}.sp-val.green{color:var(--green)}
+.sp-sub{font-family:'Martian Mono',monospace;font-size:.6rem;color:var(--cream-dimmer);margin-top:.4rem;}
+.bar-wrap{margin-top:1rem;height:2px;background:var(--lift2);}
+.bar-fill{height:100%;transition:width 1.5s ease}
+.bar-amber{background:var(--amber)}.bar-green{background:var(--green)}
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.sw{max-width:1280px;margin:0 auto;padding:6rem 2.5rem}
+.sec-eyebrow{display:flex;align-items:center;gap:1rem;font-family:'Martian Mono',monospace;font-size:.62rem;color:var(--amber);letter-spacing:.18em;text-transform:uppercase;margin-bottom:1rem;}
+.sec-eyebrow::before{content:'';width:32px;height:1px;background:var(--amber)}
+.sec-h{font-size:clamp(2rem,4vw,3rem);font-weight:700;letter-spacing:-.02em;margin-bottom:3.5rem;line-height:1.05;}
+#projects{border-top:1px solid var(--lift2)}
+.proj-list{display:flex;flex-direction:column;gap:1px;background:var(--lift2)}
+.proj-item{background:var(--surface);display:grid;grid-template-columns:80px 1fr auto;gap:0;align-items:stretch;transition:background .25s;overflow:hidden;}
+.proj-item:hover{background:var(--lift)}
+.proj-index{font-family:'Martian Mono',monospace;font-size:.65rem;color:var(--cream-dimmer);letter-spacing:.1em;padding:2rem 1.5rem;border-right:1px solid var(--lift2);display:flex;align-items:flex-start;justify-content:center;padding-top:2.2rem;}
+.proj-body{padding:2rem 2.5rem}
+.proj-status-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;}
+.pstatus{font-family:'Martian Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .5rem;border-radius:1px;}
+.pstatus.done{background:rgba(93,252,138,.1);color:var(--green);border:1px solid rgba(93,252,138,.2)}
+.pstatus.wip{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(240,165,0,.2)}
+.pstatus.plan{background:var(--lift2);color:var(--cream-dimmer);border:1px solid var(--lift2)}
+.proj-name{font-size:1.3rem;font-weight:700;margin-bottom:.6rem;letter-spacing:-.01em}
+.proj-desc{font-family:'Martian Mono',monospace;font-size:.72rem;color:var(--cream-dim);line-height:1.75;max-width:600px;}
+.proj-chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:1rem;}
+.chip{font-family:'Martian Mono',monospace;font-size:.58rem;color:var(--cream-dimmer);background:var(--lift2);padding:.2rem .55rem;border-radius:1px;letter-spacing:.05em;}
+.proj-right{padding:2rem;border-left:1px solid var(--lift2);display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:180px;}
+.proj-metrics{display:flex;flex-direction:column;gap:.75rem;align-items:flex-end}
+.pm-val{font-size:1.4rem;font-weight:700;color:var(--amber);line-height:1;text-align:right}
+.pm-lbl{font-family:'Martian Mono',monospace;font-size:.55rem;color:var(--cream-dimmer);letter-spacing:.08em;text-align:right}
+.proj-gh{font-family:'Martian Mono',monospace;font-size:.62rem;color:var(--amber);text-decoration:none;letter-spacing:.08em;display:inline-flex;align-items:center;gap:.4rem;transition:gap .2s;margin-top:1rem;}
+.proj-gh:hover{gap:.7rem}
+#certifications{background:var(--surface);border-top:1px solid var(--lift2);border-bottom:1px solid var(--lift2);}
+.cert-timeline{position:relative;padding-left:2rem;}
+.cert-timeline::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;background:linear-gradient(180deg,var(--amber),var(--amber-dim),transparent);}
+.cert-row{display:grid;grid-template-columns:200px 1fr;gap:2rem;margin-bottom:2rem;position:relative;opacity:0;transform:translateX(-12px);transition:all .5s ease;}
+.cert-row.visible{opacity:1;transform:translateX(0)}
+.cert-row::before{content:'';position:absolute;left:-2.4rem;top:1.3rem;width:10px;height:10px;border-radius:50%;background:var(--paper);border:2px solid var(--lift2);transition:border-color .3s;}
+.cert-row:hover::before{border-color:var(--amber)}
+.cert-when{font-family:'Martian Mono',monospace;font-size:.65rem;color:var(--cream-dimmer);letter-spacing:.08em;padding-top:1.4rem;text-align:right;}
+.cert-card{background:var(--lift);border:1px solid var(--lift2);padding:1.2rem 1.5rem;border-radius:2px;display:flex;align-items:center;justify-content:space-between;gap:1rem;transition:border-color .25s,background .25s;}
+.cert-card:hover{border-color:rgba(240,165,0,.3);background:var(--lift2)}
+.cert-name{font-size:.95rem;font-weight:700;margin-bottom:.25rem}
+.cert-org{font-family:'Martian Mono',monospace;font-size:.62rem;color:var(--cream-dimmer);letter-spacing:.05em}
+.cert-badge{font-family:'Martian Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:.3rem .7rem;border-radius:1px;white-space:nowrap;flex-shrink:0;}
+.cert-badge.earned{background:rgba(93,252,138,.1);color:var(--green);border:1px solid rgba(93,252,138,.25)}
+.cert-badge.active{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(240,165,0,.3)}
+.cert-badge.next{background:var(--lift2);color:var(--cream-dimmer);border:1px solid var(--lift2)}
+#skills{border-top:1px solid var(--lift2)}
+.skills-masonry{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--lift2);}
+.sk-block{background:var(--surface);padding:2rem;transition:background .25s;}
+.sk-block:hover{background:var(--lift)}
+.sk-icon{font-size:1.4rem;margin-bottom:1rem}
+.sk-title{font-size:1rem;font-weight:700;margin-bottom:1.2rem;letter-spacing:-.01em}
+.sk-items{display:flex;flex-direction:column;gap:.45rem;}
+.sk-item{display:flex;align-items:center;gap:.6rem;font-family:'Martian Mono',monospace;font-size:.68rem;color:var(--cream-dim);}
+.sk-item::before{content:'//';color:var(--cream-dimmer);font-size:.55rem}
+.sk-divider{grid-column:1/-1;background:var(--lift);padding:1.2rem 2rem;display:flex;align-items:center;gap:1rem;}
+.sk-divider-label{font-family:'Martian Mono',monospace;font-size:.62rem;color:var(--amber);letter-spacing:.15em;text-transform:uppercase;}
+.sk-divider::after{content:'';flex:1;height:1px;background:var(--lift2)}
+#contact{background:var(--surface);border-top:1px solid var(--lift2);}
+.contact-split{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:start;}
+.contact-big{font-size:clamp(2.5rem,5vw,4rem);font-weight:700;line-height:.95;letter-spacing:-.03em;margin-bottom:2rem;}
+.contact-big em{font-style:italic;color:var(--amber)}
+.contact-sub{font-family:'Martian Mono',monospace;font-size:.72rem;color:var(--cream-dim);line-height:1.8;margin-bottom:2.5rem;}
+.contact-rows{display:flex;flex-direction:column;gap:.75rem}
+.contact-row{display:flex;align-items:center;gap:1.25rem;padding:1rem 1.25rem;background:var(--lift);border:1px solid var(--lift2);text-decoration:none;color:var(--cream);border-radius:2px;transition:all .2s;}
+.contact-row:hover{border-color:rgba(240,165,0,.4);transform:translateX(6px);background:var(--lift2)}
+.cr-sym{width:36px;height:36px;background:var(--lift2);display:flex;align-items:center;justify-content:center;font-family:'Martian Mono',monospace;font-size:.8rem;color:var(--amber);border-radius:1px;flex-shrink:0;}
+.cr-lbl{font-family:'Martian Mono',monospace;font-size:.6rem;color:var(--cream-dimmer);letter-spacing:.1em;text-transform:uppercase}
+.cr-val{font-size:.88rem;font-weight:600}
+.cr-arr{margin-left:auto;color:var(--cream-dimmer);font-size:.8rem;transition:all .2s}
+.contact-row:hover .cr-arr{color:var(--amber);transform:translateX(4px)}
+.cf{display:flex;flex-direction:column;gap:1rem}
+.cf label{font-family:'Martian Mono',monospace;font-size:.6rem;color:var(--cream-dimmer);letter-spacing:.12em;text-transform:uppercase;display:block;margin-bottom:.35rem}
+.cf input,.cf textarea{width:100%;background:var(--lift);border:1px solid var(--lift2);padding:.8rem 1rem;color:var(--cream);font-family:'Martian Mono',monospace;font-size:.75rem;outline:none;border-radius:1px;transition:border-color .2s;}
+.cf input:focus,.cf textarea:focus{border-color:rgba(240,165,0,.4)}
+.cf textarea{resize:vertical;min-height:110px}
+.cf-btn{font-family:'Martian Mono',monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:.85rem;background:var(--amber);color:var(--ink);border:none;border-radius:1px;cursor:none;transition:all .2s;}
+.cf-btn:hover{background:#ffb824;box-shadow:0 0 24px rgba(240,165,0,.25)}
+footer{border-top:1px solid var(--lift2);padding:1.5rem 2.5rem;display:flex;align-items:center;justify-content:space-between;}
+.ft-mono{font-family:'Martian Mono',monospace;font-size:.6rem;color:var(--cream-dimmer);letter-spacing:.08em}
+.ft-mono b{color:var(--amber)}
+.rev{opacity:0;transform:translateY(24px);transition:opacity .55s ease,transform .55s ease}
+.rev.on{opacity:1;transform:translateY(0)}
+@media(max-width:900px){
+  #hero{grid-template-columns:1fr}.hero-right{display:none}
+  .proj-item{grid-template-columns:50px 1fr}.proj-right{display:none}
+  .skills-masonry{grid-template-columns:1fr 1fr}
+  .contact-split{grid-template-columns:1fr;gap:3rem}
+  .sw{padding:4rem 1.5rem}
+}
+@media(max-width:600px){
+  .skills-masonry{grid-template-columns:1fr}
+  nav{padding:.9rem 1.2rem}.nav-links{display:none}
+  .hero-left{padding:4rem 1.5rem}
+}
+</style>
+</head>
+<body>
+
+<div class="cur" id="cur"></div>
+<div class="cur-r" id="curR"></div>
+
+<nav>
+  <div class="nav-id">TH_PORTFOLIO</div>
+  <ul class="nav-links">
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#certifications">Certs</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <div class="nav-sys">
+    <span>SYS_v1.0</span>
+    <span class="sys-online"><span class="sys-dot"></span>ONLINE</span>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="hero-left">
+    <div class="terminal-bar">
+      <div class="t-dot r"></div><div class="t-dot y"></div><div class="t-dot g"></div>
+      <span class="t-label">bash — terrence@cloud-ops ~ </span>
+    </div>
+    <p class="hero-prompt">$ whoami <span>→ executing...</span></p>
+    <h1 class="hero-name">Terrence<br/><em>Houghton</em></h1>
+    <p class="hero-role">
+      <b>Technical Project Manager</b> · VivSoft / USDA-NASS<br/>
+      Federal cloud &amp; DevSecOps · AWS architecture<br/>
+      PMP certified · Building toward cloud engineering
+    </p>
+    <div class="hero-tags">
+      <span class="htag hot">PMP ✓</span>
+      <span class="htag live">SAA-C03 Active</span>
+      <span class="htag">Federal Contracting</span>
+      <span class="htag">DevSecOps</span>
+      <span class="htag">USDA-NASS</span>
+      <span class="htag">IaC</span>
+    </div>
+    <div class="hero-btns">
+      <a href="#projects" class="btn-a">View Projects</a>
+      <a href="#contact" class="btn-b">Get In Touch</a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="stat-panel">
+      <div>
+        <div class="sp-label">// Certification Status</div>
+        <div class="sp-val amber">PMP</div>
+        <div class="sp-sub">Project Management Professional</div>
+      </div>
+      <div>
+        <div class="bar-wrap"><div class="bar-fill bar-amber" style="width:100%"></div></div>
+        <div class="sp-sub" style="margin-top:.4rem">Earned ✓</div>
+      </div>
+    </div>
+    <div class="stat-panel">
+      <div>
+        <div class="sp-label">// SAA-C03 Progress</div>
+        <div class="sp-val green">~75%</div>
+        <div class="sp-sub">Exam target: Q1 2025</div>
+      </div>
+      <div>
+        <div class="bar-wrap"><div class="bar-fill bar-green" style="width:75%"></div></div>
+        <div class="sp-sub" style="margin-top:.4rem">Study plan active</div>
+      </div>
+    </div>
+    <div class="stat-panel">
+      <div>
+        <div class="sp-label">// Current Role</div>
+        <div class="sp-val" style="font-size:1.5rem;color:var(--cream)">TPM</div>
+        <div class="sp-sub">VivSoft · Federal Contractor</div>
+      </div>
+      <div><div class="sp-sub">USDA / NASS · PAM Compliant</div></div>
+    </div>
+    <div class="stat-panel">
+      <div>
+        <div class="sp-label">// Certs Roadmap</div>
+        <div class="sp-val amber">5</div>
+        <div class="sp-sub">Planned certifications</div>
+      </div>
+      <div>
+        <div class="bar-wrap"><div class="bar-fill bar-amber" style="width:20%"></div></div>
+        <div class="sp-sub" style="margin-top:.4rem">1 of 5 complete</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="projects">
+  <div class="sw">
+    <div class="rev">
+      <div class="sec-eyebrow">Featured Work</div>
+      <h2 class="sec-h">Projects</h2>
+    </div>
+    <div class="proj-list rev">
+
+      <div class="proj-item">
+        <div class="proj-index">01</div>
+        <div class="proj-body">
+          <div class="proj-status-row"><span class="pstatus done">✓ Complete</span></div>
+          <div class="proj-name">Static Website on AWS</div>
+          <p class="proj-desc">Serverless portfolio infrastructure: S3 origin, CloudFront global CDN, custom domain via Route 53, HTTPS enforced with ACM, and GitHub Actions CI/CD for automated deploys on push.</p>
+          <div class="proj-chips">
+            <span class="chip">S3</span><span class="chip">CloudFront</span><span class="chip">Route 53</span><span class="chip">ACM</span><span class="chip">GitHub Actions</span>
+          </div>
+        </div>
+        <div class="proj-right">
+          <div class="proj-metrics">
+            <div><div class="pm-val">$2</div><div class="pm-lbl">/ month</div></div>
+            <div><div class="pm-val">99.9%</div><div class="pm-lbl">uptime SLA</div></div>
+            <div><div class="pm-val">CDN</div><div class="pm-lbl">global edge</div></div>
+          </div>
+          <a href="#" class="proj-gh">GitHub →</a>
+        </div>
+      </div>
+
+      <div class="proj-item">
+        <div class="proj-index">02</div>
+        <div class="proj-body">
+          <div class="proj-status-row"><span class="pstatus wip">⬡ In Progress</span></div>
+          <div class="proj-name">IAM Security Hardening</div>
+          <p class="proj-desc">Terraform-provisioned IAM architecture: RBAC policies, service control policies, MFA enforcement, and automated least-privilege auditing across a simulated multi-account environment.</p>
+          <div class="proj-chips">
+            <span class="chip">AWS IAM</span><span class="chip">Terraform</span><span class="chip">SCPs</span><span class="chip">RBAC</span><span class="chip">CloudTrail</span>
+          </div>
+        </div>
+        <div class="proj-right">
+          <div class="proj-metrics">
+            <div><div class="pm-val">10+</div><div class="pm-lbl">policies</div></div>
+            <div><div class="pm-val">IaC</div><div class="pm-lbl">no drift</div></div>
+          </div>
+          <a href="#" class="proj-gh">GitHub →</a>
+        </div>
+      </div>
+
+      <div class="proj-item">
+        <div class="proj-index">03</div>
+        <div class="proj-body">
+          <div class="proj-status-row"><span class="pstatus plan">○ Planned</span></div>
+          <div class="proj-name">Serverless API — Lambda + DynamoDB</div>
+          <p class="proj-desc">Event-driven REST API using Lambda, API Gateway, and DynamoDB. Python handlers, CDK deployment, X-Ray tracing, and CloudWatch dashboards for full observability.</p>
+          <div class="proj-chips">
+            <span class="chip">Lambda</span><span class="chip">API Gateway</span><span class="chip">DynamoDB</span><span class="chip">Python</span><span class="chip">CDK</span><span class="chip">X-Ray</span>
+          </div>
+        </div>
+        <div class="proj-right">
+          <div class="proj-metrics">
+            <div><div class="pm-val">0</div><div class="pm-lbl">servers</div></div>
+            <div><div class="pm-val">Auto</div><div class="pm-lbl">scaling</div></div>
+          </div>
+          <a href="#" class="proj-gh">Soon →</a>
+        </div>
+      </div>
+
+      <div class="proj-item">
+        <div class="proj-index">04</div>
+        <div class="proj-body">
+          <div class="proj-status-row"><span class="pstatus plan">○ Planned</span></div>
+          <div class="proj-name">DevSecOps CI/CD Pipeline</div>
+          <p class="proj-desc">End-to-end pipeline on CodePipeline + CodeBuild with integrated SAST scanning, automated test gates, and blue/green CodeDeploy — built to mirror federal DevSecOps compliance patterns.</p>
+          <div class="proj-chips">
+            <span class="chip">CodePipeline</span><span class="chip">CodeBuild</span><span class="chip">CodeDeploy</span><span class="chip">SAST</span><span class="chip">Blue/Green</span>
+          </div>
+        </div>
+        <div class="proj-right">
+          <div class="proj-metrics">
+            <div><div class="pm-val">0</div><div class="pm-lbl">downtime</div></div>
+            <div><div class="pm-val">Sec+</div><div class="pm-lbl">scanning</div></div>
+          </div>
+          <a href="#" class="proj-gh">Soon →</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="certifications">
+  <div class="sw">
+    <div class="rev">
+      <div class="sec-eyebrow">Credentials</div>
+      <h2 class="sec-h">Certification<br/>Roadmap</h2>
+    </div>
+    <div class="cert-timeline">
+
+      <div class="cert-row rev">
+        <div class="cert-when">2024</div>
+        <div class="cert-card">
+          <div><div class="cert-name">Project Management Professional</div><div class="cert-org">PMI · PMP Certification</div></div>
+          <div class="cert-badge earned">✓ Earned</div>
+        </div>
+      </div>
+
+      <div class="cert-row rev">
+        <div class="cert-when">2025 — Now</div>
+        <div class="cert-card">
+          <div><div class="cert-name">AWS Solutions Architect Associate</div><div class="cert-org">Amazon Web Services · SAA-C03</div></div>
+          <div class="cert-badge active">◎ Active</div>
+        </div>
+      </div>
+
+      <div class="cert-row rev">
+        <div class="cert-when">2025 — Next</div>
+        <div class="cert-card">
+          <div><div class="cert-name">AWS Developer Associate</div><div class="cert-org">Amazon Web Services · DVA-C02</div></div>
+          <div class="cert-badge next">○ Queued</div>
+        </div>
+      </div>
+
+      <div class="cert-row rev">
+        <div class="cert-when">2025–26</div>
+        <div class="cert-card">
+          <div><div class="cert-name">AWS ML Engineer Associate</div><div class="cert-org">Amazon Web Services · MLA-C01</div></div>
+          <div class="cert-badge next">○ Queued</div>
+        </div>
+      </div>
+
+      <div class="cert-row rev">
+        <div class="cert-when">2026</div>
+        <div class="cert-card">
+          <div><div class="cert-name">HashiCorp Terraform Associate</div><div class="cert-org">HashiCorp · TA-003</div></div>
+          <div class="cert-badge next">○ Queued</div>
+        </div>
+      </div>
+
+      <div class="cert-row rev">
+        <div class="cert-when">2026</div>
+        <div class="cert-card">
+          <div><div class="cert-name">Python for AWS Cloud</div><div class="cert-org">Cloud Specialty Track</div></div>
+          <div class="cert-badge next">○ Queued</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="skills">
+  <div class="sw">
+    <div class="rev">
+      <div class="sec-eyebrow">Capabilities</div>
+      <h2 class="sec-h">Skills</h2>
+    </div>
+    <div class="skills-masonry rev">
+
+      <div class="sk-divider"><span class="sk-divider-label">// Cloud &amp; Infrastructure</span></div>
+
+      <div class="sk-block">
+        <div class="sk-icon">☁️</div>
+        <div class="sk-title">AWS Services</div>
+        <div class="sk-items">
+          <div class="sk-item">S3 &amp; CloudFront</div>
+          <div class="sk-item">Route 53 &amp; ACM</div>
+          <div class="sk-item">Lambda &amp; API Gateway</div>
+          <div class="sk-item">EC2 &amp; VPC</div>
+          <div class="sk-item">IAM &amp; SCP</div>
+          <div class="sk-item">CloudWatch &amp; X-Ray</div>
+        </div>
+      </div>
+
+      <div class="sk-block">
+        <div class="sk-icon">🏗️</div>
+        <div class="sk-title">Infrastructure as Code</div>
+        <div class="sk-items">
+          <div class="sk-item">Terraform</div>
+          <div class="sk-item">AWS CDK</div>
+          <div class="sk-item">CloudFormation</div>
+          <div class="sk-item">GitHub Actions</div>
+          <div class="sk-item">CI/CD Pipelines</div>
+        </div>
+      </div>
+
+      <div class="sk-block">
+        <div class="sk-icon">🔒</div>
+        <div class="sk-title">Security</div>
+        <div class="sk-items">
+          <div class="sk-item">Least Privilege IAM</div>
+          <div class="sk-item">DevSecOps Practices</div>
+          <div class="sk-item">FedRAMP Awareness</div>
+          <div class="sk-item">SAST / DAST Scanning</div>
+          <div class="sk-item">Cloud Security Posture</div>
+        </div>
+      </div>
+
+      <div class="sk-divider"><span class="sk-divider-label">// Management &amp; Development</span></div>
+
+      <div class="sk-block">
+        <div class="sk-icon">📋</div>
+        <div class="sk-title">Project Management</div>
+        <div class="sk-items">
+          <div class="sk-item">PMP Certified</div>
+          <div class="sk-item">Federal PMO Frameworks</div>
+          <div class="sk-item">JIRA &amp; MS Project</div>
+          <div class="sk-item">PAM / USDA Governance</div>
+          <div class="sk-item">Agile / Scrum</div>
+          <div class="sk-item">COR Relationship Mgmt</div>
+        </div>
+      </div>
+
+      <div class="sk-block">
+        <div class="sk-icon">💻</div>
+        <div class="sk-title">Programming</div>
+        <div class="sk-items">
+          <div class="sk-item">Python</div>
+          <div class="sk-item">Bash / Shell</div>
+          <div class="sk-item">YAML &amp; JSON</div>
+          <div class="sk-item">Git &amp; GitHub</div>
+          <div class="sk-item">SQL (Fundamentals)</div>
+        </div>
+      </div>
+
+      <div class="sk-block">
+        <div class="sk-icon">🏛️</div>
+        <div class="sk-title">Federal Domain</div>
+        <div class="sk-items">
+          <div class="sk-item">USDA / NASS Programs</div>
+          <div class="sk-item">Federal Contracting (FAR)</div>
+          <div class="sk-item">Audit Readiness</div>
+          <div class="sk-item">AWS Public Sector</div>
+          <div class="sk-item">Compliance Reporting</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="sw">
+    <div class="contact-split">
+      <div class="rev">
+        <h2 class="contact-big">Let's<br/><em>Connect</em></h2>
+        <p class="contact-sub">Seeking cloud engineering and federal tech roles. If you're building on AWS, working in public sector, or just want to talk cloud — I'm listening.</p>
+        <div class="contact-rows">
+          <a href="https://github.com" target="_blank" class="contact-row">
+            <div class="cr-sym">gh</div>
+            <div><div class="cr-lbl">GitHub</div><div class="cr-val">github.com/yourusername</div></div>
+            <span class="cr-arr">→</span>
+          </a>
+          <a href="https://linkedin.com" target="_blank" class="contact-row">
+            <div class="cr-sym">in</div>
+            <div><div class="cr-lbl">LinkedIn</div><div class="cr-val">Connect Professionally</div></div>
+            <span class="cr-arr">→</span>
+          </a>
+          <a href="mailto:you@email.com" class="contact-row">
+            <div class="cr-sym">@</div>
+            <div><div class="cr-lbl">Email</div><div class="cr-val">you@email.com</div></div>
+            <span class="cr-arr">→</span>
+          </a>
+        </div>
+      </div>
+      <div class="rev">
+        <div class="cf">
+          <div><label>Name</label><input type="text" placeholder="Your name"/></div>
+          <div><label>Email</label><input type="email" placeholder="your@email.com"/></div>
+          <div><label>Message</label><textarea placeholder="What's on your mind?"></textarea></div>
+          <button class="cf-btn">Transmit Message →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p class="ft-mono">TH_PORTFOLIO · Built with HTML/CSS · Hosted on <b>AWS</b></p>
+  <p class="ft-mono">© 2025 Terrence Houghton</p>
+</footer>
+
+<script>
+const cur=document.getElementById('cur'),curR=document.getElementById('curR');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function anim(){
+  cur.style.cssText=`left:${mx-4}px;top:${my-4}px`;
+  rx+=(mx-rx)*.13;ry+=(my-ry)*.13;
+  curR.style.cssText=`left:${rx-14}px;top:${ry-14}px`;
+  requestAnimationFrame(anim);
+})();
+
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach((e,i)=>{
+    if(e.isIntersecting){setTimeout(()=>e.target.classList.add('on'),i*90);obs.unobserve(e.target);}
+  });
+},{threshold:.08});
+document.querySelectorAll('.rev').forEach(el=>obs.observe(el));
+
+const cobs=new IntersectionObserver(entries=>{
+  entries.forEach((e,i)=>{
+    if(e.isIntersecting){setTimeout(()=>e.target.classList.add('visible'),i*120);cobs.unobserve(e.target);}
+  });
+},{threshold:.1});
+document.querySelectorAll('.cert-row').forEach(el=>cobs.observe(el));
+
+setTimeout(()=>{
+  document.querySelectorAll('.bar-fill').forEach(b=>{
+    const w=b.style.width;b.style.width='0';
+    setTimeout(()=>b.style.width=w,200);
+  });
+},600);
+</script>
+</body>
+</html>
